@@ -1,0 +1,12 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "tweebuilder",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.tweebuilder.main",
+            "python": "${workspaceFolder}/.venv/Scripts/python.exe"
+        }
+    ]
+}

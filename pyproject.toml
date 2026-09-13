@@ -1,0 +1,26 @@
+[project]
+name = "tweebuilder"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "trg601", email = "tylergarman276@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "aiofiles>=25.1.0",
+    "google-api-python-client>=2.198.0",
+    "google-auth-httplib2>=0.4.1",
+    "google-auth-oauthlib>=1.4.0",
+    "merman>=0.7.0",
+    "pydantic>=2.13.4",
+    "ruff>=0.16.3",
+    "ty>=0.0.72",
+]
+
+[project.scripts]
+tweebuilder = "tweebuilder:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"

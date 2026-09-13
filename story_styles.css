@@ -1,0 +1,35 @@
+body {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 2;
+  background-color: #000000;
+}
+.right-align {
+  text-align: right;
+}
+#ui-bar {
+  background-color: #000000;
+}
+#ui-bar-toggle {
+  border-right: 1px solid #444;
+}
+
+/* Video overlap stuff */
+#video-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: red;
+}
+#memory {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  overflow: hidden;
+}
