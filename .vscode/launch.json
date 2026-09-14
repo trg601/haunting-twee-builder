@@ -7,6 +7,13 @@
             "request": "launch",
             "module": "src.tweebuilder.main",
             "python": "${workspaceFolder}/.venv/Scripts/python.exe"
+        },
+        {
+            "name": "tweebuilder local test",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.tweebuilder.local_test",
+            "python": "${workspaceFolder}/.venv/Scripts/python.exe"
         }
     ]
 }

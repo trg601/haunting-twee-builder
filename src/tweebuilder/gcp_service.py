@@ -46,13 +46,33 @@ class GCPService:
         self.files = self.drive_service.files()
         self.docs = self.docs_service.documents()
 
-    async def get_file_by_name(self, name: str) -> dict | None:
-        file_id = await self.get_file_id_by_name(name)
+    async def get_file_by_id(
+        self, file_id: str, use_cache: bool = False
+    ) -> dict | None:
+        if use_cache and await aiofiles.os.path.exists(f"cache/{file_id}.json"):
+            # If not expecting changes and we have it cached, use the cached version
+            async with aiofiles.open(f"cache/{file_id}.json", "r") as f:
+                return json.loads(await f.read())
+        document = self.docs.get(documentId=file_id, includeTabsContent=True).execute()
+        # Add to cache if this is a new document retrieved from another source (e.g. the webhook)
+        if (
+            document
+            and (title := document.get("title"))
+            and title not in self.file_id_cache
+        ):
+            await self.add_file_to_cache(title, file_id)
+        # Save file contents to cache
+        async with aiofiles.open(f"cache/{file_id}.json", "w") as f:
+            await f.write(json.dumps(obj=document, indent=4))
+        return document
+
+    async def get_file_by_name(self, name: str, use_cache: bool = False) -> dict | None:
+        file_id = await self._get_file_id_by_name(name)
         if not file_id:
             return None
-        return self.docs.get(documentId=file_id, includeTabsContent=True).execute()
+        return await self.get_file_by_id(file_id, use_cache)
 
-    async def get_file_id_by_name(
+    async def _get_file_id_by_name(
         self,
         name: str,
         mime_type: str = "application/vnd.google-apps.document",
@@ -81,10 +101,13 @@ class GCPService:
                 return None
             file_id = items[0].get("id")
             # Update cache
-            self.file_id_cache[name] = file_id
-            async with aiofiles.open(self.cache_filename, "w") as f:
-                await f.write(json.dumps(self.file_id_cache, indent=4))
+            await self.add_file_to_cache(name, file_id)
             return file_id
         except HttpError as error:
             print(f"An error occurred: {error}")
             return None
+
+    async def add_file_to_cache(self, name: str, file_id: str):
+        self.file_id_cache[name] = file_id
+        async with aiofiles.open(self.cache_filename, "w") as f:
+            await f.write(json.dumps(self.file_id_cache, indent=4))

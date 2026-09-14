@@ -1,4 +1,5 @@
 import asyncio
+import os
 import re
 from enum import Enum
 
@@ -6,6 +7,9 @@ import aiofiles
 import aiofiles.os
 from merman import MermanEngine
 from pydantic import BaseModel
+
+from tweebuilder.gcp_service import GCPService
+from tweebuilder.twine_config import global_twine_config
 
 
 class SegmentType(int, Enum):
@@ -365,16 +369,18 @@ def parse_tab(
     return nodes
 
 
-def parse_document(title: str, tabs: list[dict]) -> Document | None:
+def parse_document(doc_data: list[tuple[str, list[dict]]]) -> Document | None:
     nodes: list[Node] = []
     seen_id_counter: dict[str, int] = {}
     header_map: dict[str, str] = {}
     tab_name_lookup: dict[str, str] = {}
     start_node = None
 
-    sort_tabs(tabs)
-    for tab in tabs:
-        nodes += parse_tab(tab, tab_name_lookup, title, header_map, seen_id_counter)
+    for title, tabs in doc_data:
+        # Process each act's tabs individually
+        sort_tabs(tabs)
+        for tab in tabs:
+            nodes += parse_tab(tab, tab_name_lookup, title, header_map, seen_id_counter)
 
     # After all nodes are created, try to resolve invalid links
     all_node_ids = {node.node_id for node in nodes}
@@ -445,11 +451,19 @@ Current Loop: $current_loop
 """
 
 
-async def generate_twee(doc_data: dict) -> str:
-    title = doc_data.get("title", "<unknown name>")
-    print(f"Parsing document {title}...")
-    tabs = doc_data.get("tabs", [])
-    document = parse_document(title, tabs)
+async def generate_twee(gcp_service: GCPService) -> str:
+    doc_data: list[tuple[str, list[dict]]] = []
+    for act in global_twine_config.acts:
+        print(f"Processing act: {act.name}")
+        file_data = await gcp_service.get_file_by_id(act.file_id)
+        if not file_data or not file_data.get("title"):
+            print(f"Failed to retrieve document for act: {act.name}")
+            continue
+        title = file_data.get("title", "")
+        tabs = file_data.get("tabs", [])
+        doc_data.append((title, tabs))
+
+    document = parse_document(doc_data)
 
     if not document:
         print("No nodes found in the document.")
@@ -494,7 +508,8 @@ async def generate_twee(doc_data: dict) -> str:
 
 
 async def generate_twine_file(twee_file: str, output_filename: str) -> None:
-    command = ["tweego/tweego.exe", twee_file, "-o", output_filename]
+    executable_path = "tweego/tweego.exe" if os.name == "nt" else "tweego/tweego"
+    command = [executable_path, twee_file, "-o", output_filename]
     try:
         process = await asyncio.create_subprocess_exec(
             *command,
