@@ -1,7 +1,11 @@
 import asyncio
 import os
-from asyncio import ProactorEventLoop, SelectorEventLoop
 from typing import Annotated
+
+if os.name == "nt":
+    from asyncio import ProactorEventLoop as EventLoopFactory
+else:
+    from asyncio import SelectorEventLoop as EventLoopFactory
 
 from fastapi import FastAPI, Header
 from googleapiclient.errors import HttpError
@@ -63,11 +67,11 @@ async def gdrive_webhook(
     return {"status": "received"}
 
 
-class ProactorServer(Server):
+class Server(Server):
     def run(self, sockets=None):
         asyncio.run(
             self.serve(),
-            loop_factory=ProactorEventLoop if os.name == "nt" else SelectorEventLoop,
+            loop_factory=EventLoopFactory,
         )
 
 
@@ -78,5 +82,5 @@ if __name__ == "__main__":
         port=8000,
         reload=True,
     )
-    server = ProactorServer(config=config)
+    server = Server(config=config)
     ChangeReload(config, target=server.run, sockets=[]).run()
