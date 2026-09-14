@@ -10,7 +10,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-install-project --no-dev
 
 COPY src ./src
-COPY story_script.js story_styles.css ./
+COPY story_script.js story_styles.css README.md ./
 
 RUN uv sync --frozen --no-dev
 
