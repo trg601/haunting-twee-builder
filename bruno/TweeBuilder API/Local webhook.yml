@@ -1,0 +1,20 @@
+info:
+  name: Local webhook
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{local}}/gdrive-webhook"
+  headers:
+    - name: x-goog-resource-uri
+      value: 1spIIxfgv-KMgcOhvWIcqZDp24UTp0QV_8pwpIOIWN6o
+    - name: x-goog-resource-state
+      value: update
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
