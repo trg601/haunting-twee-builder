@@ -1,0 +1,14 @@
+services:
+  tweebuilder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./cache:/app/cache
+      - ./build:/app/build
+      - ./tweego:/app/tweego
+      # credentials are copied onto the target machine manually
+      - ./service-account.json:/app/service-account.json:ro
+    restart: unless-stopped

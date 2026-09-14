@@ -5,5 +5,4 @@ service-account.json
 credentials.json
 token.json
 cache/
-tweego/
 build/
