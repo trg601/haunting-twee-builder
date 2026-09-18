@@ -5,11 +5,14 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
 WORKDIR /app
 
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+
 # Install dependencies first so this layer is cached when only source changes
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-install-project --no-dev
 
 COPY src ./src
+COPY --chmod=111 tweego/tweego ./tweego/tweego
 COPY story_script.js story_styles.css README.md service-account.json ./
 
 RUN uv sync --frozen --no-dev
