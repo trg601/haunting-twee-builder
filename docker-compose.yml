@@ -3,10 +3,10 @@ services:
     image: traefik:latest
     ports:
       - "80:80"
-      - "8080:8080"
+      - "443:443"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "$PWD/traefik.dev.toml:/etc/traefik/traefik.toml"
+      - "$PWD/traefik.toml:/etc/traefik/traefik.toml"
 
   tweebuilder:
     build:
@@ -28,7 +28,9 @@ services:
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.fastapi.rule=Host(`fastapi.localhost`)"
+      - "traefik.http.routers.fastapi.rule=Host(`api.tylergarman.net`)"
+      - "traefik.http.routers.fastapi.tls=true"
+      - "traefik.http.routers.fastapi.tls.certresolver=letsencrypt"
 
   postgres:
     image: postgres:18-alpine
