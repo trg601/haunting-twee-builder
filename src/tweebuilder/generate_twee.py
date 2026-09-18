@@ -456,6 +456,10 @@ STORY_HEADER = """:: StoryTitle
 Tab: $tab_path
 Current Loop: $current_loop
 Generated: <<print setup.generatedAt>>
+
+<<button "Reload">>
+    <<run setup.auth.reload()>>
+<</button>>
 """
 GENERATED_TIMESTAMP_JS = """
 setup.generatedAt = (new Date({generated_time})).toLocaleTimeString('en-US', {{month: 'numeric', day: 'numeric'}});
@@ -498,8 +502,11 @@ async def generate_twee(gcp_service: GCPService) -> str:
     # Append JS and CSS sections
     async with aiofiles.open("story_script.js", "r") as js_file:
         js_content = await js_file.read()
-        generated_time = round(time.time() * 1000)
-        output += f"\n\n:: StoryScript [script]\n{js_content}\n{GENERATED_TIMESTAMP_JS.format(generated_time=generated_time)}\n"
+    async with aiofiles.open("story_script_dev.js", "r") as dev_js_file:
+        dev_js_content = await dev_js_file.read()
+
+    generated_time = round(time.time() * 1000)
+    output += f"\n\n:: StoryScript [script]\n{js_content}\n{dev_js_content}\n{GENERATED_TIMESTAMP_JS.format(generated_time=generated_time)}\n"
 
     async with aiofiles.open("story_styles.css", "r") as css_file:
         css_content = await css_file.read()
