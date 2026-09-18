@@ -35,6 +35,7 @@ services:
       - "traefik.http.routers.fastapi.tls=true"
       - "traefik.http.routers.fastapi.tls.certresolver=letsencrypt"
       - "traefik.http.services.fastapi.loadbalancer.server.port=8000"
+      - "traefik.http.middlewares.forward-ssl.headers.customrequestheaders.X-Forwarded-Proto=https"
 
   postgres:
     image: postgres:18-alpine
