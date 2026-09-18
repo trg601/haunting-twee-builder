@@ -127,10 +127,6 @@ async def verify_gdrive_channel_token(
         x_goog_channel_token, GDRIVE_CHANNEL_TOKEN
     ):
         raise CREDENTIALS_EXCEPTION
-    try:
-        jwt.decode(x_goog_channel_token, SECRET_KEY, algorithms=[ALGORITHM])
-    except InvalidTokenError:
-        raise CREDENTIALS_EXCEPTION
 
 
 GDriveChannelTokenDep = Annotated[None, Depends(verify_gdrive_channel_token)]
