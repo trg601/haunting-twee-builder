@@ -2,13 +2,15 @@ import asyncio
 import os
 from typing import Annotated
 
+from tweebuilder.auth import AuthenticateUserDep, auth_router
+from tweebuilder.static_files import static_router
+
 if os.name == "nt":
     from asyncio import ProactorEventLoop as EventLoopFactory
 else:
     from asyncio import SelectorEventLoop as EventLoopFactory
 
 from fastapi import FastAPI, Header
-from fastapi.staticfiles import StaticFiles
 from googleapiclient.errors import HttpError
 from uvicorn.config import Config
 from uvicorn.server import Server
@@ -19,11 +21,12 @@ from tweebuilder.generate_twee import generate_twee
 from tweebuilder.twine_config import global_twine_config
 
 app = FastAPI(lifespan=lifespan)
-app.mount("/static", StaticFiles(directory="build"), name="static")
+app.include_router(auth_router)
+app.include_router(static_router)
 
 
 @app.post("/build")
-async def build(gcp_service: GCPServiceDep):
+async def build(gcp_service: GCPServiceDep, _: AuthenticateUserDep):
     try:
         await generate_twee(gcp_service)
         return {"status": "success"}

@@ -6,7 +6,8 @@
             "type": "debugpy",
             "request": "launch",
             "module": "src.tweebuilder.main",
-            "python": "${workspaceFolder}/.venv/Scripts/python.exe"
+            "python": "${workspaceFolder}/.venv/Scripts/python.exe",
+            "envFile": "${workspaceFolder}/.env"
         },
         {
             "name": "tweebuilder local test",

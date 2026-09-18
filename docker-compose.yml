@@ -14,10 +14,38 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_ALGORITHM=${AUTH_ALGORITHM}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     volumes:
       - ./cache:/app/cache
       - ./build:/app/build
+    depends_on:
+      - postgres
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.fastapi.rule=Host(`fastapi.localhost`)"
+
+  postgres:
+    image: postgres:18-alpine
+    shm_size: 128MB
+    command: postgres -c shared_buffers=128MB -c autovacuum=on -c max_connections=10
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ./src/tweebuilder/database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1GB
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
