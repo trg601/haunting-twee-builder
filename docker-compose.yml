@@ -7,13 +7,14 @@ services:
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "$PWD/traefik.toml:/etc/traefik/traefik.toml"
+      - "letsencrypt:/letsencrypt"
 
   tweebuilder:
     build:
       context: .
       dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     environment:
       - ENVIRONMENT=${ENVIRONMENT}
       - AUTH_SECRET=${AUTH_SECRET}
@@ -29,8 +30,10 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.fastapi.rule=Host(`api.tylergarman.net`)"
+      - "traefik.http.routers.fastapi.entrypoints=websecure"
       - "traefik.http.routers.fastapi.tls=true"
       - "traefik.http.routers.fastapi.tls.certresolver=letsencrypt"
+      - "traefik.http.services.fastapi.loadbalancer.server.port=8000"
 
   postgres:
     image: postgres:18-alpine
@@ -52,3 +55,4 @@ services:
 
 volumes:
   postgres-data:
+  letsencrypt:
