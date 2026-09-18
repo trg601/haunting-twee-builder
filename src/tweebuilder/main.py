@@ -21,6 +21,7 @@ from tweebuilder.app_context import GCPServiceDep, lifespan
 from tweebuilder.generate_twee import generate_twee
 from tweebuilder.twine_config import global_twine_config
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(lifespan=lifespan)
