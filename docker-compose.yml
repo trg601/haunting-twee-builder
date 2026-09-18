@@ -20,6 +20,7 @@ services:
       - AUTH_SECRET=${AUTH_SECRET}
       - AUTH_ALGORITHM=${AUTH_ALGORITHM}
       - GDRIVE_CHANNEL_TOKEN=${GDRIVE_CHANNEL_TOKEN}
+      - GDRIVE_WATCH_FILE_ID=${GDRIVE_WATCH_FILE_ID}
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     volumes:
       - ./cache:/app/cache
