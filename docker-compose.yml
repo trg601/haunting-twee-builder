@@ -33,7 +33,7 @@ services:
   postgres:
     image: postgres:18-alpine
     shm_size: 128MB
-    command: postgres -c shared_buffers=128MB -c autovacuum=on -c max_connections=10
+    command: postgres -c shared_buffers=128MB -c autovacuum=on -c max_connections=50
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}

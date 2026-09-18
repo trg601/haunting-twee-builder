@@ -12,7 +12,9 @@ from tweebuilder.gcp_service import GCPService
 async def lifespan(app: FastAPI):
     # Created once per app lifetime and reused across all requests.
     app.state.gcp_service = GCPService()
-    app.state.db_pool = await asyncpg.create_pool(dsn=environ["DATABASE_URL"])
+    app.state.db_pool = await asyncpg.create_pool(
+        dsn=environ["DATABASE_URL"], min_size=2, max_size=30
+    )
     yield
     await app.state.db_pool.close()
 
