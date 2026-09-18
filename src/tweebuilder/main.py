@@ -8,6 +8,7 @@ else:
     from asyncio import SelectorEventLoop as EventLoopFactory
 
 from fastapi import FastAPI, Header
+from fastapi.staticfiles import StaticFiles
 from googleapiclient.errors import HttpError
 from uvicorn.config import Config
 from uvicorn.server import Server
@@ -18,6 +19,7 @@ from tweebuilder.generate_twee import generate_twee
 from tweebuilder.twine_config import global_twine_config
 
 app = FastAPI(lifespan=lifespan)
+app.mount("/static", StaticFiles(directory="build"), name="static")
 
 
 @app.post("/build")
