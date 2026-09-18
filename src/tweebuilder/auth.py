@@ -1,10 +1,11 @@
 from datetime import UTC, datetime, timedelta
 from os import environ
+from secrets import compare_digest
 from typing import Annotated
 
 import asyncpg
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jwt.exceptions import InvalidTokenError
 from pwdlib import PasswordHash
@@ -17,6 +18,10 @@ ALGORITHM = environ.get("AUTH_ALGORITHM", "")
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 if not SECRET_KEY or not ALGORITHM:
     raise ValueError("AUTH_SECRET and ALGORITHM must be set in environment variables")
+
+GDRIVE_CHANNEL_TOKEN = environ.get("GDRIVE_CHANNEL_TOKEN", "")
+if not GDRIVE_CHANNEL_TOKEN:
+    raise ValueError("GDRIVE_CHANNEL_TOKEN must be set in environment variables")
 
 
 class Token(BaseModel):
@@ -85,32 +90,50 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     return encoded_jwt
 
 
+CREDENTIALS_EXCEPTION = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Not authorized",
+    headers={"WWW-Authenticate": "Bearer"},
+)
+
+
 async def authenticate_user_from_token(
     db_pool: PGPoolDep, token: Annotated[str, Depends(oauth2_scheme)]
 ) -> User:
     if environ.get("ENVIRONMENT") == "development":
         return User(username="ty")
 
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Not authorized",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     except InvalidTokenError:
-        raise credentials_exception
+        raise CREDENTIALS_EXCEPTION
     username = payload.get("sub")
     if not username:
-        raise credentials_exception
+        raise CREDENTIALS_EXCEPTION
     user = await get_user(db_pool, username)
     if not user:
-        raise credentials_exception
+        raise CREDENTIALS_EXCEPTION
     return user
 
 
 # Add this to any route's parameters to require a valid bearer token, e.g. `user: CurrentUserDep`
 AuthenticateUserDep = Annotated[User, Depends(authenticate_user_from_token)]
+
+
+async def verify_gdrive_channel_token(
+    x_goog_channel_token: Annotated[str | None, Header()] = None,
+) -> None:
+    if not x_goog_channel_token or not compare_digest(
+        x_goog_channel_token, GDRIVE_CHANNEL_TOKEN
+    ):
+        raise CREDENTIALS_EXCEPTION
+    try:
+        jwt.decode(x_goog_channel_token, SECRET_KEY, algorithms=[ALGORITHM])
+    except InvalidTokenError:
+        raise CREDENTIALS_EXCEPTION
+
+
+GDriveChannelTokenDep = Annotated[None, Depends(verify_gdrive_channel_token)]
 
 
 @auth_router.post("/token")

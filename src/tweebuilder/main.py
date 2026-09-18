@@ -2,7 +2,7 @@ import asyncio
 import os
 from typing import Annotated
 
-from tweebuilder.auth import AuthenticateUserDep, auth_router
+from tweebuilder.auth import AuthenticateUserDep, GDriveChannelTokenDep, auth_router
 from tweebuilder.static_files import static_router
 
 if os.name == "nt":
@@ -38,6 +38,7 @@ async def build(gcp_service: GCPServiceDep, _: AuthenticateUserDep):
 @app.post("/gdrive-webhook")
 async def gdrive_webhook(
     gcp_service: GCPServiceDep,
+    _: GDriveChannelTokenDep,
     x_goog_resource_uri: Annotated[str | None, Header()] = None,
     x_goog_resource_state: Annotated[str | None, Header()] = None,
 ):
