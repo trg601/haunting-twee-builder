@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 import re
 import time
@@ -11,6 +12,8 @@ from pydantic import BaseModel
 
 from tweebuilder.gcp_service import GCPService
 from tweebuilder.twine_config import global_twine_config
+
+logger = logging.getLogger(__name__)
 
 
 class SegmentType(int, Enum):
@@ -263,7 +266,7 @@ def parse_tab(
         return []  # Skip tabs that start with a dash or a dot, they are just for information or organization
     tab_path: str = tab_name_prefix + " > " + properties.get("title", tab_id)
     tab_name_lookup[tab_id] = tab_path
-    print(f"Parsing tab: {tab_path}")
+    logger.info("Parsing tab: %s", tab_path)
 
     raw_paragraphs = [
         i.get("paragraph", {})
@@ -334,8 +337,8 @@ def parse_tab(
                     last_header = node_title
                     current_track = last_header.split("-")[-1]
                 except ValueError:
-                    print(
-                        f"ERROR: Failed to parse loop number from node title: {node_title}"
+                    logger.exception(
+                        "Failed to parse loop number from node title: %s", node_title
                     )
         elif node_title and (indent == 1 or node_content.strip(" \t\n\r")):
             node_content += content
@@ -386,7 +389,7 @@ def parse_document(doc_data: list[tuple[str, list[dict]]]) -> Document | None:
     # After all nodes are created, try to resolve invalid links
     all_node_ids = {node.node_id for node in nodes}
 
-    print("Resolving links...")
+    logger.info("Resolving links...")
     for i, node in enumerate(nodes):
         next_node = nodes[i + 1] if i + 1 < len(nodes) else None
         for link in node.links:
@@ -406,8 +409,11 @@ def parse_document(doc_data: list[tuple[str, list[dict]]]) -> Document | None:
                 ):
                     node.relink(link, next_node.node_id)
                 else:
-                    print(
-                        f"Warning: Could not resolve link '{link.node_id}' in node '{node.node_id}' in tab '{node.tab_path}'"
+                    logger.warning(
+                        "Could not resolve link '%s' in node '%s' in tab '%s'",
+                        link.node_id,
+                        node.node_id,
+                        node.tab_path,
                     )
         if (
             not node.links
@@ -459,10 +465,10 @@ setup.generatedAt = (new Date({generated_time})).toLocaleTimeString('en-US', {{m
 async def generate_twee(gcp_service: GCPService) -> str:
     doc_data: list[tuple[str, list[dict]]] = []
     for act in global_twine_config.acts:
-        print(f"Processing act: {act.name}")
+        logger.info("Processing act: %s", act.name)
         file_data = await gcp_service.get_file_by_id(act.file_id)
         if not file_data or not file_data.get("title"):
-            print(f"Failed to retrieve document for act: {act.name}")
+            logger.warning("Failed to retrieve document for act: %s", act.name)
             continue
         title = file_data.get("title", "")
         tabs = file_data.get("tabs", [])
@@ -471,7 +477,7 @@ async def generate_twee(gcp_service: GCPService) -> str:
     document = parse_document(doc_data)
 
     if not document:
-        print("No nodes found in the document.")
+        logger.warning("No nodes found in the document.")
         return ""
 
     # Start with Header
@@ -524,11 +530,11 @@ async def generate_twine_file(twee_file: str, output_filename: str) -> None:
         )
         _, stderr = await process.communicate()
         if process.returncode == 0:
-            print("Twine file generated successfully.")
+            logger.info("Twine file generated successfully.")
         else:
-            print(f"Error generating Twine file: {stderr.decode()}")
-    except FileNotFoundError as e:
-        print(f"Exception encountered generating Twine file: {e}")
+            logger.error("Error generating Twine file: %s", stderr.decode())
+    except FileNotFoundError:
+        logger.exception("Exception encountered generating Twine file")
 
 
 async def build_mermaid_diagram(document: Document, tabs: dict):

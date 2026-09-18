@@ -1,3 +1,4 @@
+import logging
 import uuid
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
@@ -12,6 +13,8 @@ from fastapi import Depends, FastAPI, Request
 from googleapiclient.errors import HttpError
 
 from tweebuilder.gcp_service import GCPService
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -53,7 +56,7 @@ async def gdrive_watch_startup(gcp_service: GCPService, scheduler: AsyncIOSchedu
 
 async def gdrive_new_watch(gcp_service: GCPService, scheduler: AsyncIOScheduler):
     # Submit a new changes request to Google Drive and get the expiration time
-    print("Submitting new Google Drive watch request")
+    logger.info("Submitting new Google Drive watch request")
 
     try:
         body = {
@@ -72,9 +75,9 @@ async def gdrive_new_watch(gcp_service: GCPService, scheduler: AsyncIOScheduler)
         if expiration := result.get("expiration"):
             expiry = datetime.fromtimestamp(float(expiration) / 1000, tz=UTC)
         else:
-            print("Failed to pull expiration time from the API")
-    except HttpError as e:
-        print(f"Failed to submit Google Drive watch request: {e}")
+            logger.warning("Failed to pull expiration time from the API")
+    except HttpError:
+        logger.exception("Failed to submit Google Drive watch request")
 
     if not expiry:
         # Just retry after 1 hour if we couldn't get the expiration from the API

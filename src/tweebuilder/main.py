@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 from typing import Annotated
 
@@ -20,6 +21,8 @@ from tweebuilder.app_context import GCPServiceDep, lifespan
 from tweebuilder.generate_twee import generate_twee
 from tweebuilder.twine_config import global_twine_config
 
+logger = logging.getLogger(__name__)
+
 app = FastAPI(lifespan=lifespan)
 app.include_router(auth_router)
 app.include_router(static_router)
@@ -30,8 +33,8 @@ async def build(gcp_service: GCPServiceDep, _: AuthenticateUserDep):
     try:
         await generate_twee(gcp_service)
         return {"status": "success"}
-    except HttpError as error:
-        print(f"An error occurred: {error}")
+    except HttpError:
+        logger.exception("An error occurred")
     return {"status": "failure"}
 
 
@@ -54,20 +57,24 @@ async def gdrive_webhook(
         # Just ignoring to avoid excessing logging, please do not bite me in the ass >:(
         return {"status": "ignored"}
 
-    print(
-        f"Received Google Drive webhook ({x_goog_resource_state}) for resource ID: {resource_id}"
+    logger.info(
+        "Received Google Drive webhook (%s) for resource ID: %s",
+        x_goog_resource_state,
+        resource_id,
     )
     # Download document and save to cache
     try:
         file_data = await gcp_service.get_file_by_id(resource_id, use_cache=False)
         if file_data:
-            print(
-                f"File data for resource ID {resource_id} retrieved successfully. Rebuilding project..."
+            logger.info(
+                "File data for resource ID %s retrieved successfully. Rebuilding project...",
+                resource_id,
             )
             await generate_twee(gcp_service)
-    except HttpError as error:
-        print(
-            f"An error occurred while retrieving file data for resource ID {resource_id}: {error}"
+    except HttpError:
+        logger.exception(
+            "An error occurred while retrieving file data for resource ID %s",
+            resource_id,
         )
 
     return {"status": "received"}

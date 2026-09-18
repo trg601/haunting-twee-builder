@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 
 import aiofiles
@@ -7,6 +8,8 @@ from google.auth.transport.requests import Request
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+
+logger = logging.getLogger(__name__)
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = [
@@ -97,14 +100,14 @@ class GCPService:
             ).execute()
             items = results.get("files", [])
             if not items:
-                print(f"No file found with name: {name}")
+                logger.warning("No file found with name: %s", name)
                 return None
             file_id = items[0].get("id")
             # Update cache
             await self.add_file_to_cache(name, file_id)
             return file_id
-        except HttpError as error:
-            print(f"An error occurred: {error}")
+        except HttpError:
+            logger.exception("An error occurred")
             return None
 
     async def add_file_to_cache(self, name: str, file_id: str):
