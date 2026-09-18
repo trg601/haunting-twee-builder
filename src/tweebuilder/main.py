@@ -54,15 +54,15 @@ async def gdrive_webhook(
         if x_goog_resource_uri and "/files/" in x_goog_resource_uri
         else None
     )
-    if not resource_id or resource_id not in global_twine_config.watch_list:
-        # Just ignoring to avoid excessing logging, please do not bite me in the ass >:(
-        return {"status": "ignored"}
-
     logger.info(
         "Received Google Drive webhook (%s) for resource ID: %s",
         x_goog_resource_state,
         resource_id,
     )
+    if not resource_id or resource_id not in global_twine_config.watch_list:
+        # Ignore to avoid unnecessary processing
+        return {"status": "ignored"}
+
     # Download document and save to cache
     try:
         file_data = await gcp_service.get_file_by_id(resource_id, use_cache=False)
