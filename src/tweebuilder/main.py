@@ -3,6 +3,8 @@ import logging
 import os
 from typing import Annotated
 
+from fastapi import HTTPException
+
 from tweebuilder.auth import AuthenticateUserDep, GDriveChannelTokenDep, auth_router
 from tweebuilder.static_files import static_router
 
@@ -29,10 +31,18 @@ app.include_router(auth_router)
 app.include_router(static_router)
 
 
+build_lock = asyncio.Lock()
+
+
 @app.post("/build")
 async def build(gcp_service: GCPServiceDep, _: AuthenticateUserDep):
     try:
-        await generate_twee(gcp_service)
+        if not build_lock.locked():
+            async with build_lock:
+                await generate_twee(gcp_service)
+        else:
+            logger.info("Build already in progress, skipping...")
+            raise HTTPException(status_code=409, detail="Build already in progress")
         return {"status": "success"}
     except HttpError:
         logger.exception("An error occurred")
@@ -63,6 +73,9 @@ async def gdrive_webhook(
         # Ignore to avoid unnecessary processing
         return {"status": "ignored"}
 
+    if build_lock.locked():
+        return {"status": "in progress"}
+
     # Download document and save to cache
     try:
         file_data = await gcp_service.get_file_by_id(resource_id, use_cache=False)
@@ -71,7 +84,8 @@ async def gdrive_webhook(
                 "File data for resource ID %s retrieved successfully. Rebuilding project...",
                 resource_id,
             )
-            await generate_twee(gcp_service)
+            async with build_lock:
+                await generate_twee(gcp_service)
     except HttpError:
         logger.exception(
             "An error occurred while retrieving file data for resource ID %s",

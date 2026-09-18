@@ -26,7 +26,8 @@ async def lifespan(app: FastAPI):
     )
     app.state.scheduler = AsyncIOScheduler()
     app.state.scheduler.start()
-    await gdrive_watch_startup(app.state.gcp_service, app.state.scheduler)
+    if environ["ENVIRONMENT"] != "development":
+        await gdrive_watch_startup(app.state.gcp_service, app.state.scheduler)
     yield
     await app.state.db_pool.close()
     app.state.scheduler.shutdown()
