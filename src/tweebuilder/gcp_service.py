@@ -42,9 +42,13 @@ class GCPService:
             os.makedirs("cache")
 
         # https://googleapis.github.io/google-api-python-client/docs/dyn/drive_v3.html
-        self.drive_service = build("drive", "v3", credentials=self.creds)
+        self.drive_service = build(
+            "drive", "v3", credentials=self.creds, cache_discovery=False
+        )
         # https://googleapis.github.io/google-api-python-client/docs/dyn/docs_v1.html
-        self.docs_service = build("docs", "v1", credentials=self.creds)
+        self.docs_service = build(
+            "docs", "v1", credentials=self.creds, cache_discovery=False
+        )
 
         self.files = self.drive_service.files()
         self.docs = self.docs_service.documents()
