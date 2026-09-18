@@ -12,6 +12,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-install-project --no-dev
 
 COPY src ./src
+COPY tweego ./tweego
 COPY --chmod=111 tweego/tweego ./tweego/tweego
 COPY story_script.js story_styles.css README.md service-account.json ./
 
