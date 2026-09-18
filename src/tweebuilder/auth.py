@@ -6,7 +6,7 @@ from typing import Annotated
 
 import asyncpg
 import jwt
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jwt.exceptions import InvalidTokenError
 from pwdlib import PasswordHash
@@ -176,7 +176,7 @@ async def login_for_access_token(
 
 @auth_router.post("/refresh")
 async def refresh_token_for_access_token(
-    refresh_token: str, db_pool: PGPoolDep
+    refresh_token: Annotated[str, Body(embed=True)], db_pool: PGPoolDep
 ) -> Token:
     try:
         payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])

@@ -1,50 +1,58 @@
 setup.auth = (function () {
   var API_BASE = "https://api.tylergarman.net";
-  var STORAGE_KEY = "tweebuilder.refreshToken";
+  var COOKIE_NAME = "tweebuilder_refresh_token";
+  var COOKIE_FLAGS = "; path=/; secure; samesite=strict";
   var TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
   var pending = null;
+  var refreshing = null;
   var accessToken = null;
+  // Used when the story runs from file:// or cookies are blocked, where a secure cookie cannot be set.
+  var memoryStore = null;
+
+  function readCookie() {
+    var prefix = COOKIE_NAME + "=";
+    var parts = (document.cookie || "").split("; ");
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].indexOf(prefix) === 0) {
+        return decodeURIComponent(parts[i].slice(prefix.length));
+      }
+    }
+    return null;
+  }
 
   function readStored() {
-    try {
-      var raw = window.localStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
-      var stored = JSON.parse(raw);
-      if (!stored || !stored.token || !stored.expiresAt) return null;
-      if (Date.now() >= stored.expiresAt) {
-        window.localStorage.removeItem(STORAGE_KEY);
-        return null;
-      }
-      return stored;
-    } catch (err) {
-      console.warn("Unable to read stored token:", err);
-      return null;
+    var token = readCookie();
+    if (token) return token;
+    if (memoryStore && Date.now() < memoryStore.expiresAt) {
+      return memoryStore.token;
     }
+    memoryStore = null;
+    return null;
   }
 
   function store(token) {
-    try {
-      window.localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ token: token, expiresAt: Date.now() + TOKEN_TTL_MS }),
-      );
-    } catch (err) {
-      console.warn("Unable to persist token:", err);
-    }
+    memoryStore = { token: token, expiresAt: Date.now() + TOKEN_TTL_MS };
+    document.cookie =
+      COOKIE_NAME +
+      "=" +
+      encodeURIComponent(token) +
+      "; max-age=" +
+      TOKEN_TTL_MS / 1000 +
+      COOKIE_FLAGS;
+  }
+
+  function clearStored() {
+    memoryStore = null;
+    document.cookie = COOKIE_NAME + "=; max-age=0" + COOKIE_FLAGS;
   }
 
   function clear() {
     accessToken = null;
-    try {
-      window.localStorage.removeItem(STORAGE_KEY);
-    } catch (err) {
-      console.warn("Unable to clear token:", err);
-    }
+    clearStored();
   }
 
   function getToken() {
-    var stored = readStored();
-    return stored ? stored.token : null;
+    return readStored();
   }
 
   function acceptTokenPair(data) {
@@ -81,9 +89,11 @@ setup.auth = (function () {
 
   // Rotates the stored refresh token for a fresh access token.
   function refreshAccessToken() {
+    // Rotation invalidates the token server-side, so concurrent callers must share one request.
+    if (refreshing) return refreshing;
     var refreshToken = getToken();
     if (!refreshToken) return Promise.reject(new Error("No stored session."));
-    return fetch(API_BASE + "/refresh", {
+    refreshing = fetch(API_BASE + "/refresh", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh_token: refreshToken }),
@@ -95,7 +105,11 @@ setup.auth = (function () {
         }
         return response.json();
       })
-      .then(acceptTokenPair);
+      .then(acceptTokenPair)
+      .finally(function () {
+        refreshing = null;
+      });
+    return refreshing;
   }
 
   function login() {
