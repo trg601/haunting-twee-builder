@@ -198,7 +198,7 @@ SPECIAL_LINKS = {
     "h-appy": "loop {current_loop}-happy-{current_track}",
     "h-amp": "loop {current_loop}-hampered-{current_track}",
     "h-aun": "loop {current_loop}-haunted-{current_track}",
-    "pia": "loop {current_loop}-surrounding loop-{current_track}",
+    "pia": "loop {current_loop}-surrounding loop-{current_track}@slide 4",
     "do": "loop {next_loop}-surrounding loop-{current_track}",  # TODO: Create proper DO/DO NOT sections
     "do not": "loop {next_loop}-surrounding loop-{current_track}",
 }
@@ -274,6 +274,7 @@ def parse_tab(
     ]
     paragraphs = [parse_raw_paragraph(p) for p in raw_paragraphs]
     last_header: str | None = None
+    current_header: str | None = None
     current_loop: int = 0  # Which loop are you on? e.g. Loop1
     current_track: str = ""  # Which track are you on? e.g. ResistAfter1
     node_title = None
@@ -315,6 +316,10 @@ def parse_tab(
                 if last_header:
                     header_map[last_header] = node_title
                     last_header = None
+                if current_header:
+                    # create linking for specific nodes within a header, ignoring the added index for duplicate names
+                    original_id = node_title.split("__")[0]
+                    header_map[current_header + "@" + original_id] = node_title
             if continue_node:
                 name_candidate = "continue"
                 continue_node = False
@@ -335,6 +340,7 @@ def parse_tab(
                 try:
                     current_loop = int(match.group(1))
                     last_header = node_title
+                    current_header = last_header
                     current_track = last_header.split("-")[-1]
                 except ValueError:
                     logger.exception(
