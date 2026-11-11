@@ -70,7 +70,7 @@ class ParsedParagraph(BaseModel):
 
 def parse_raw_paragraph(p: dict) -> ParsedParagraph:
     p_style = p.get("paragraphStyle", {})
-    indent = (p_style.get("indentStart") or p_style.get("indentFirstLine", {})).get(
+    indent = (p_style.get("indentFirstLine") or p_style.get("indentStart", {})).get(
         "magnitude", 0
     ) / TAB_LENGTH_PTS
     content = ""
@@ -299,10 +299,14 @@ def parse_tab(
     for p in paragraphs:
         indent: int = p.indent - indent_offset
         content: str = p.content
+        content_empty: bool = not content.strip(" \t\n\r")
         name_candidate = normalize_id(content)
+        if name_candidate == "notouch":
+            print("test")
 
-        if (indent <= 0 and name_candidate) or continue_node:
-            if node_title and node_content.strip(" \t\n\r"):
+        if not content_empty and ((indent <= 0 and name_candidate) or continue_node):
+            node_content = node_content.strip(" \t\n\r")
+            if node_title and node_content:
                 add_node(
                     tab_path,
                     nodes,
@@ -346,8 +350,12 @@ def parse_tab(
                     logger.exception(
                         "Failed to parse loop number from node title: %s", node_title
                     )
-        elif node_title and (indent == 1 or node_content.strip(" \t\n\r")):
-            node_content += content
+        elif node_title and (indent >= 1 or content_empty):
+            if indent > 1 and not content_empty:
+                # Manually add back in additional tabs as spaces
+                node_content += f'<span style="padding-left: {(indent - 1) * 2}em;">{content}</span>'
+            else:
+                node_content += content
 
         node_links += p.links
         if any(l for l in p.links if l.node_id == ">>"):
@@ -368,6 +376,10 @@ def parse_tab(
         )
         if last_header:
             header_map[last_header] = node_title
+        if current_header:
+            # create linking for specific nodes within a header, ignoring the added index for duplicate names
+            original_id = node_title.split("__")[0]
+            header_map[current_header + "@" + original_id] = node_title
 
     child_tabs = tab.get("childTabs", [])
     sort_tabs(child_tabs)
